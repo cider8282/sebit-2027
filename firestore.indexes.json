@@ -1,0 +1,8 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    {"collectionGroup": "chunks", "fieldPath": "body", "indexes": []},
+    {"collectionGroup": "sessions", "fieldPath": "expiresAt", "ttl": true, "indexes": []},
+    {"collectionGroup": "attempts", "fieldPath": "expiresAt", "ttl": true, "indexes": []}
+  ]
+}

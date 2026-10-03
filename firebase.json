@@ -1,0 +1,5 @@
+{
+  "functions": [{"source": "functions", "codebase": "sebit-v4", "runtime": "python312", "ignore": ["venv", "__pycache__", "*.pyc", "tests", ".env.local", ".secret.local"]}],
+  "firestore": {"rules": "firestore.rules", "indexes": "firestore.indexes.json"},
+  "emulators": {"firestore": {"port": 8085}, "ui": {"enabled": false}, "singleProjectMode": true}
+}

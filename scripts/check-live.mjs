@@ -1,0 +1,10 @@
+const project = process.env.FIREBASE_PROJECT_ID;
+const origin = process.env.PAGES_ORIGIN;
+const base = `https://asia-northeast3-${project}.cloudfunctions.net/sebit_api`;
+const status = await fetch(base+'/status', {headers:{Origin:origin},signal:AbortSignal.timeout(90000)});
+if (!status.ok || status.headers.get('access-control-allow-origin') !== origin) throw Error('Firebase status/CORS check failed; Pages was not published.');
+const body = await status.json();
+if (typeof body.configured !== 'boolean') throw Error('Unexpected backend response.');
+const denied = await fetch(base+'/state', {headers:{Origin:origin},signal:AbortSignal.timeout(90000)});
+if (denied.ok) throw Error('Anonymous state access must be rejected.');
+console.log('Firebase status, CORS and anonymous access checks passed.');

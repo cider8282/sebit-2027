@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // All reads/writes go through the authenticated, role-filtered server API.
+    // Install in a NEW project: these rules intentionally deny every client path.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

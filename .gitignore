@@ -1,0 +1,11 @@
+functions/venv/
+**/__pycache__/
+*.pyc
+functions/.env*
+functions/.secret.local
+gha-creds-*.json
+*-debug.log
+.firebase/
+node_modules/
+test-results/
+service-account*.json

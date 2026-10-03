@@ -1,0 +1,62 @@
+[
+  {
+    "id": 8,
+    "label": "마이쮸",
+    "category": "간식",
+    "src": "./assets/shop/chewy.png"
+  },
+  {
+    "id": 9,
+    "label": "미니 초콜릿",
+    "category": "간식",
+    "src": "./assets/shop/chocolate.png"
+  },
+  {
+    "id": 10,
+    "label": "하리보",
+    "category": "간식",
+    "src": "./assets/shop/gummy.png"
+  },
+  {
+    "id": 11,
+    "label": "기타 음식",
+    "category": "간식",
+    "src": "./assets/shop/snackbox.png"
+  },
+  {
+    "id": 12,
+    "label": "미니 과자",
+    "category": "간식",
+    "src": "./assets/shop/chips.png"
+  },
+  {
+    "id": 0,
+    "label": "문구류",
+    "category": "문구",
+    "src": "./assets/shop/stationery.png"
+  },
+  {
+    "id": 13,
+    "label": "미니 장난감",
+    "category": "특별",
+    "sprite": 7
+  },
+  {
+    "id": 15,
+    "label": "특별 선물",
+    "category": "특별",
+    "sprite": 6
+  },
+  {
+    "id": 16,
+    "label": "쿠폰",
+    "category": "쿠폰",
+    "sprite": 6
+  },
+  {
+    "id": 7,
+    "label": "놀이 선택권",
+    "category": "쿠폰",
+    "sprite": 7
+  }
+]

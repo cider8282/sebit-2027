@@ -1,0 +1,100 @@
+name: SEBIT - Firebase and GitHub Pages
+on:
+  workflow_dispatch:
+    inputs:
+      dedicated_project:
+        description: '새 SEBIT 전용 Firebase 프로젝트임을 확인했습니다 (기존 앱과 공유 금지).'
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sebit-deploy
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check destination confirmation
+        env:
+          CONFIRMED: ${{ inputs.dedicated_project }}
+        run: test "$CONFIRMED" = 'true'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install test tools
+        run: |
+          pip install -r functions/requirements.txt requests
+          npm install --global firebase-tools@14.22.0
+      - name: Test with isolated Firestore emulator
+        run: firebase emulators:exec --only firestore --project demo-sebit-test 'python -m unittest discover -s tests -v'
+      - name: Check web files
+        run: |
+          node tests/test_ui.cjs
+          node tests/test_web.cjs
+
+  backend:
+    needs: verify
+    runs-on: ubuntu-24.04
+    env:
+      FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+      PAGES_ORIGIN: ${{ vars.PAGES_ORIGIN }}
+      SEBIT_SETUP_KEY: ${{ secrets.SEBIT_SETUP_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Authenticate to the dedicated Firebase project
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Prepare configuration
+        run: node scripts/configure.mjs
+      - name: Install deployment tools
+        run: |
+          python -m venv functions/venv
+          functions/venv/bin/pip install -r functions/requirements.txt
+          npm install --global firebase-tools@14.22.0
+      - name: Store the private first-setup code
+        run: firebase functions:secrets:set SEBIT_SETUP_KEY --project "$FIREBASE_PROJECT_ID" --data-file /tmp/sebit-setup-key.txt --non-interactive
+      - name: Deploy Firebase backend and deny-by-default rules
+        run: firebase deploy --only functions:sebit-v4,firestore:rules,firestore:indexes --project "$FIREBASE_PROJECT_ID" --non-interactive
+      - name: Check deployed API before publishing the website
+        run: node scripts/check-live.mjs
+      - name: Upload only public website files
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Remove temporary secret
+        if: always()
+        run: rm -f /tmp/sebit-setup-key.txt
+
+  pages:
+    needs: backend
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

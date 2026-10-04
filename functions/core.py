@@ -181,7 +181,7 @@ def dispatch(s,c,a,cmd,b):
     if cmd=='donate':
         S(); amount=num(b['amount'],1,100); used=sum(d['amount'] for d in s['donations'] if d['student']==a and d['date']==day()); remaining=10000-s['thermo']['total']
         require(remaining>0,'최종 목표를 달성했어요.'); require(amount<=remaining,'남은 기부 금액이 바뀌었어요. 다시 확인해 주세요.'); require(used+amount<=100,'하루 기부 한도는 100루멘이에요.'); require(me['lumen']>=amount,'루멘이 부족해요.')
-        s['thermo']['total']+=amount; s['donations'].append(dict(id=uid(),student=a,date=day(),amount=amount,round=s['thermo']['round'])); change(s,a,-amount,0,'학급 온도계 기부','donation'); return
+        s['thermo']['total']+=amount; s['donations'].append(dict(id=uid(),student=a,date=day(),amount=amount,time=now(),round=s['thermo']['round'])); change(s,a,-amount,0,'학급 온도계 기부','donation'); return
     if cmd=='thermo':
         T()
         if b.get('reset'): s['thermo'].update(total=0,round=uid(),done=[])

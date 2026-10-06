@@ -104,7 +104,7 @@ def project_view(s,a):
         out['threads']=[r for r in out['threads'] if r['student']==a]
         out['citizens']=[dict(id=ci['id'],start=ci['start'],end=ci.get('end'),status=ci['status'],reward=ci['reward'],eligible=a in eligible(s,ci) if ci.get('end') else None,paid=any(l.get('key')==f"citizen:{ci['id']}:{a}" and not l['cancelled'] for l in s['ledger'])) for ci in out['citizens'] if ci['status']!='archived']
         out['jobPeriods']=[dict(id=p['id'],start=p['start'],end=p.get('end'),status=p['status'],jobs={p['assignments'][a]:p['jobs'][p['assignments'][a]]},assignments={a:p['assignments'][a]},adjustments={a:p['adjustments'][a]} if a in p.get('adjustments',{}) else {}) for p in out['jobPeriods'] if a in p['assignments']]
-        out['quests']=[q for q in out['quests'] if q['status']!='draft']
+        out['quests']=[q for q in out['quests'] if q['status']!='draft' and not q.get('listRemoved',False)]
     out['actor']=a; out['serverTime']=now(); return out
 
 def dispatch(s,c,a,cmd,b):
@@ -237,7 +237,11 @@ def dispatch(s,c,a,cmd,b):
         T()
         if b.get('id') and b.get('action'):
             q=get(s['quests'],b['id']); action=b['action']
-            if action=='copy': q=copy.deepcopy(q); q.update(id=uid(),name=q['name']+' (복사)',status='draft'); s['quests'].append(q)
+            if action=='copy': q=copy.deepcopy(q); q.update(id=uid(),name=q['name']+' (복사)',status='draft'); q.pop('listRemoved',None); s['quests'].append(q)
+            elif action=='remove':
+                require(q['status']=='ended' or q['end']<day(),'종료된 퀘스트만 목록에서 제거할 수 있어요.')
+                require(not any(x['quest']==q['id'] and x['status']=='pending' for x in s['applications']),'승인 대기 신청을 먼저 처리해 주세요.')
+                q['listRemoved']=True
             elif action=='delete': require(not any(x['quest']==q['id'] for x in s['applications']),'신청 내역이 있어 숨김으로 처리해 주세요.'); s['quests'].remove(q)
             else: require(action in ['hidden','ended','published']); q['status']=action
         else:
@@ -250,7 +254,7 @@ def dispatch(s,c,a,cmd,b):
                     if p['active']: notify(s,p['id'],'새 퀘스트: '+value['name'],'quests')
         return
     if cmd=='applyQuest':
-        S(); q=get(s['quests'],b['id']); require(q['status']=='published' and q['start']<=day()<=q['end'],'신청 기간이 아니에요.'); require(not any(r['student']==a and r['quest']==q['id'] and r['status'] in ['pending','approved'] for r in s['applications']),'이미 신청하거나 지급받았어요.'); s['applications'].append(dict(id=uid(),student=a,quest=q['id'],status='pending',time=now())); return
+        S(); q=get(s['quests'],b['id']); require(not q.get('listRemoved',False) and q['status']=='published' and q['start']<=day()<=q['end'],'신청 기간이 아니에요.'); require(not any(r['student']==a and r['quest']==q['id'] and r['status'] in ['pending','approved'] for r in s['applications']),'이미 신청하거나 지급받았어요.'); s['applications'].append(dict(id=uid(),student=a,quest=q['id'],status='pending',time=now())); return
     if cmd=='reviewQuest':
         T(); app=get(s['applications'],b['id']); require(app['status']=='pending'); q=get(s['quests'],app['quest'])
         if b['approve']: app['status']='approved'; reward(s,app['student'],q['reward'],q['name']+' 보상',f"quest:{q['id']}:{app['student']}")
@@ -300,6 +304,8 @@ def dispatch(s,c,a,cmd,b):
         th['messages'].append(dict(id=uid(),by=a,body=content,time=now())); th['lastBy']=a
         if teacher: notify(s,th['student'],'선생님의 새 답장이 도착했어요.','messages')
         return
+    if cmd=='threadDelete':
+        T(); th=get(s['threads'],b['id']); require(th['closed'],'대화를 완료한 후 삭제해 주세요.'); s['threads'].remove(th); return
     if cmd=='thread': T(); get(s['threads'],b['id'])['closed']=bool(b['closed']); return
     if cmd=='read':
         S()
@@ -399,7 +405,7 @@ def validate_backup(data):
     for p in s['jobPeriods']:
         require(isinstance(p['assignments'],dict) and isinstance(p['jobs'],dict) and isinstance(p['adjustments'],dict))
         require(all(sid in seen and jid in p['jobs'] for sid,jid in p['assignments'].items()))
-    for q in s['quests']:date(q['start']);date(q['end']);rate(q['reward']);require(q['end']>=q['start'])
+    for q in s['quests']:require(type(q.get('listRemoved',False)) is bool,'퀘스트 목록 상태를 확인해 주세요.');date(q['start']);date(q['end']);rate(q['reward']);require(q['end']>=q['start'])
     require(all(a['quest'] in {q['id'] for q in s['quests']} for a in s['applications']))
     require(all(v['ledger'] in ledger_ids for v in s['violations']))
     require(all(r['category'] in {c['id'] for c in s['categories']} for r in s['rules']))

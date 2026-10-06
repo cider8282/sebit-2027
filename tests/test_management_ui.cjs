@@ -15,3 +15,12 @@ run(`state.quests=[{id:'old',name:'완료 과제',description:'',start:today(),e
 let quests=run('questsPage()');assert(quests.indexOf('진행 과제')<quests.indexOf('완료 과제'));assert(!quests.includes('제거 과제'));assert(quests.includes('목록에서 삭제'));assert(!quests.includes('data-action="questDelete"'));
 run(`state.threads=[{id:'thread',student:'p1',title:'대화',closed:true,lastBy:'teacher',messages:[{by:'teacher',body:'답장',time:Date.now()}]}];selectedThread='thread'`);assert(run('messagesPage()').includes('data-action="deleteThread"'));run(`state.actor='p1'`);assert(!run('messagesPage()').includes('data-action="deleteThread"'));
 console.log('PASS job status, latest 30 records, escaped memo, quest order/removal, teacher-only closed conversation button');
+
+run(`state.actor='teacher'`);assert(run('messagesPage()').includes('새 메시지 보내기'));assert(source.includes('message-select-all'));assert(source.includes("command('teacherMessage'"));run(`state.actor='p1'`);assert(!run('messagesPage()').includes('새 메시지 보내기'));assert(run('messagesPage()').includes('새 메시지'));
+(async()=>{
+ run(`state.actor='teacher';token='test';globalThis.sent=[];globalThis.nextForm={title:'안내',body:'준비물','recipient:p1':'on','recipient:p2':'on'};modal=async()=>nextForm;command=async(cmd,data)=>{sent.push({cmd,data:JSON.parse(JSON.stringify(data))});return true}`);
+ await run(`action('newMessage','')`);assert.equal(run('sent[0].cmd'),'teacherMessage');assert.equal(run('sent[0].data.students.join(",")'),'p1,p2');assert.equal(run('teacherMessageDraft.body'),'');
+ run(`nextForm={title:'실패 안내',body:'남겨둘 내용','recipient:p1':'on'};command=async()=>false`);await run(`action('newMessage','')`);assert.equal(run('teacherMessageDraft.body'),'남겨둘 내용');assert.equal(run('teacherMessageDraft.students[0]'),'p1');
+ run(`nextForm={title:'선택 없음',body:'내용'};command=async()=>{throw Error('must not send')}`);await run(`action('newMessage','')`);
+ console.log('PASS teacher recipient payload, successful draft clearing, failed-send draft preservation and empty selection');
+})().catch(e=>{console.error(e);process.exitCode=1});

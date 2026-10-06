@@ -295,6 +295,14 @@ def dispatch(s,c,a,cmd,b):
             elif action=='reset': current['status']='archived'; s['violationSince']=now()
             else: fail('처리할 수 없는 동작이에요.')
         return
+    if cmd=='teacherMessage':
+        recipients=ids(); title=txt(b['title'],100); content=txt(b['body'],3000)
+        require(all(student(s,sid)['active'] for sid in recipients),'활동 중인 학생에게만 보낼 수 있어요.')
+        timestamp=now()
+        for sid in recipients:
+            s['threads'].append(dict(id=uid(),student=sid,title=title,closed=False,lastBy='teacher',messages=[dict(id=uid(),by='teacher',body=content,time=timestamp)]))
+            notify(s,sid,'선생님의 새 메시지가 도착했어요.','messages')
+        return
     if cmd=='message':
         content=txt(b['body'],3000)
         if b.get('id'):
